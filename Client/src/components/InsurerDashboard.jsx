@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import {
   getInsurerDashboard,
   addClient,
-  getClientDetails,
+//   updateClient,
+  getClientMedicalDocs,
 } from "../services/api";
 
 function InsurerDashboard() {
@@ -47,8 +48,8 @@ function InsurerDashboard() {
 
   const handleViewMedicalDocs = async (clientId) => {
     try {
-      const { data } = await getClientDetails(clientId);
-      setMedicalDocs(data.medicalDocs);
+      const { data } = await getClientMedicalDocs(clientId);
+      setMedicalDocs(data);
       setSelectedClient(clientId);
     } catch (error) {
       console.error(error);

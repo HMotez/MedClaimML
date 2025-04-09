@@ -7,8 +7,7 @@ import MedicalBulletin from '../models/MedicalBulletin.js';
 export const signupInsurer = async (req, res) => {
   try {
     const { email, password, companyName } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ email, password: hashedPassword, role: 'insurer' });
+    const user = await User.create({ email, password, role: 'insurer' });
     const insurer = await Insurer.create({ userId: user._id, companyName });
     res.status(201).json({ message: 'Insurer created successfully' });
   } catch (error) {
@@ -56,32 +55,24 @@ export const updateClient = async (req, res) => {
 
 export const getDashboard = async (req, res) => {
   try {
-    const insurer = await Insurer.findOne({ userId: req.user.id });
+    const insurer = await Insurer.findOne({ userId: req.user.id })
+      .populate('clients.medicalDocuments');
     res.json({
       companyName: insurer.companyName,
       financialInfo: insurer.financialInfo,
-      clients: insurer.clients,
+      clients: insurer.clients
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
 };
 
-export const getClientDetails = async (req, res) => {
+export const getClientMedicalDocuments = async (req, res) => {
   try {
     const insurer = await Insurer.findOne({ userId: req.user.id });
     const client = insurer.clients.find(c => c.clientId === req.params.clientId);
-    
-    if (!client) {
-      return res.status(404).json({ message: 'Client not found' });
-    }
-
     const medicalDocs = await MedicalBulletin.find({ clientId: client.clientId });
-
-    res.json({
-      client,
-      medicalDocs,
-    });
+    res.json(medicalDocs);
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

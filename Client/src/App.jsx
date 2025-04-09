@@ -1,19 +1,19 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import InsurerLogin from './components/InsurerLogin';
-import DoctorLogin from './components/DoctorLogin';
+import InsurerLogin from './components/InsurerAuth';
+import DoctorLogin from './components/DoctorAuth';
 import InsurerDashboard from './components/InsurerDashboard';
 import DoctorDashboard from './components/DoctorDashboard';
 import PrivateRoute from './components/PrivateRoute';
-import ClientPage from './components/ClientPage'; // Import ClientPage
-import HomePage from './components/HomePage'; // Import HomePage
-import './App.css';
+import HomePage from './components/HomePage';
+import './index.css'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/insurer/login" element={<InsurerLogin />} />
-        <Route path="/doctor/login" element={<DoctorLogin />} />
+      <Route path="/" element={<HomePage />} />
+      <Route path="/insurer/login" element={<InsurerLogin />} />
+      <Route path="/doctor/login" element={<DoctorLogin />} />
         <Route 
           path="/insurer/dashboard" 
           element={
@@ -30,9 +30,6 @@ function App() {
             </PrivateRoute>
           } 
         />
-        {/* Add Home page route */}
-        <Route path="/" element={<HomePage />} />
-        <Route path="/client/:clientId" element={<ClientPage />} />
       </Routes>
     </BrowserRouter>
   );
