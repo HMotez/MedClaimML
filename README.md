@@ -20,4 +20,4 @@ The `test/` directory ensures the reliability of TrueCare AI through comprehensi
 
 ## Project Snapshot
 
-![TrueCare AI Interface](./client/src/assets/demo.png)
+![TrueCare AI Interface](./Client/src/assets/demo.png)
