@@ -1,179 +1,293 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { doctorLogin, doctorSignup } from '../services/api';
-
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Pagination, Autoplay } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/pagination';
-
-import slide1 from './../assets/6.png';
-import slide2 from './../assets/6.png';
-import slide3 from './../assets/6.png';
+import slide1 from '../assets/6.png';
+import slide2 from '../assets/3.png';
+import logo from '../assets/logo.png';
+import { IoCheckmarkDone, IoArrowBack } from 'react-icons/io5';
+import { Toaster, toast } from 'sonner';
 
 function DoctorAuth() {
   const [isSignup, setIsSignup] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    fullName: '',
-    specialty: ''
+    name: '',
+    speciality: '',
+    phoneNumber: '',
+    npiNumber: '',
+    nationalIdOrPassport: null,
+    medicalLicense: null,
+    proofOfPractice: null,
+    taxIdOrBusinessRegistration: null,
+    image: null,
   });
+  const [dragging, setDragging] = useState({});
   const navigate = useNavigate();
+
+  const handleFileChange = (e, name) => {
+    const file = e.target.files ? e.target.files[0] : e.dataTransfer.files[0];
+    if (file && file.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB.');
+      return;
+    }
+    if (file && !['image/jpeg', 'image/png', 'application/pdf'].includes(file.type)) {
+      toast.error('File must be JPEG, PNG, or PDF.');
+      return;
+    }
+    setFormData({ ...formData, [name]: file });
+  };
+
+  const handleDragOver = (e, name) => {
+    e.preventDefault();
+    setDragging({ ...dragging, [name]: true });
+  };
+
+  const handleDragLeave = (e, name) => {
+    e.preventDefault();
+    setDragging({ ...dragging, [name]: false });
+  };
+
+  const handleDrop = (e, name) => {
+    e.preventDefault();
+    setDragging({ ...dragging, [name]: false });
+    handleFileChange(e, name);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const { data } = isSignup
-        ? await doctorSignup(formData)
-        : await doctorLogin(formData);
-
-      if (!isSignup) {
-        localStorage.setItem('token', data.token);
-        navigate('/doctor/dashboard');
-      } else {
+      if (isSignup) {
+        if (
+          !formData.name ||
+          !formData.speciality ||
+          !formData.phoneNumber ||
+          !formData.npiNumber ||
+          !formData.nationalIdOrPassport ||
+          !formData.medicalLicense ||
+          !formData.proofOfPractice ||
+          !formData.taxIdOrBusinessRegistration ||
+          !formData.image
+        ) {
+          toast.error('All fields are required.');
+          return;
+        }
+        const data = new FormData();
+        data.append('email', formData.email);
+        data.append('password', formData.password);
+        data.append('name', formData.name);
+        data.append('speciality', formData.speciality);
+        data.append('phoneNumber', formData.phoneNumber);
+        data.append('npiNumber', formData.npiNumber);
+        data.append('nationalIdOrPassport', formData.nationalIdOrPassport);
+        data.append('medicalLicense', formData.medicalLicense);
+        data.append('proofOfPractice', formData.proofOfPractice);
+        data.append('taxIdOrBusinessRegistration', formData.taxIdOrBusinessRegistration);
+        data.append('image', formData.image);
+  
+        // Log FormData contents for debugging
+        for (let [key, value] of data.entries()) {
+          console.log(key, value);
+        }
+  
+        await doctorSignup(data);
+        toast.success('Account created successfully! Please log in.');
         setIsSignup(false);
+        setFormData({
+          email: '',
+          password: '',
+          name: '',
+          speciality: '',
+          phoneNumber: '',
+          npiNumber: '',
+          nationalIdOrPassport: null,
+          medicalLicense: null,
+          proofOfPractice: null,
+          taxIdOrBusinessRegistration: null,
+          image: null,
+        });
+      } else {
+        const { data } = await doctorLogin({ email: formData.email, password: formData.password });
+        localStorage.setItem('token', data.token);
+        toast.success('Logged in successfully!');
+        navigate('/');
       }
     } catch (error) {
-      console.error(error.response?.data?.message);
+      const errorMessage = error.response?.data?.message || 'An error occurred. Please try again.';
+      toast.error(errorMessage);
     }
   };
 
+  const renderFileInput = (Args) => {
+    const { name, label } = Args;
+    return (
+      <div
+        className={`relative w-full px-4 py-2 border rounded-lg ${
+          dragging[name] ? 'border-blue-500 bg-gray-50' : 'border-gray-300'
+        } flex items-center`}
+        onDragOver={(e) => handleDragOver(e, name)}
+        onDragLeave={(e) => handleDragLeave(e, name)}
+        onDrop={(e) => handleDrop(e, name)}
+      >
+        <input
+          type="file"
+          name={name}
+          accept="image/jpeg,image/png,application/pdf"
+          onChange={(e) => handleFileChange(e, name)}
+          className="opacity-0 absolute w-full h-full cursor-pointer"
+          required
+        />
+        <span className="text-gray-600 truncate">
+          {formData[name] ? formData[name].name : `${label}`}
+        </span>
+        {formData[name] && <IoCheckmarkDone className="w-5 h-5 text-green-800 ml-auto" />}
+      </div>
+    );
+  };
+
   return (
-    <div className="min-h-screen flex">
-      {/* Left: Auth Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-white">
-        <div className="w-full max-w-md space-y-6">
-          <h1 className="text-3xl font-bold text-[#1B4965] text-center">
-            {isSignup ? 'Create your account' : 'Welcome back'}
+    <div className="flex relative">
+         <Toaster richColors position="top-right" />
+         <a
+           href="/"
+           className="absolute mt-12 ml-12 flex items-center text-md tracking-tight text-blue-600 hover:text-blue-800 transition duration-200"
+         >
+           <IoArrowBack className="w-6 h-6 mr-2" />
+           Back to Main
+         </a>
+         <div className="w-full lg:w-1/2 flex items-start justify-center bg-white min-h-screen">
+           <div className="w-full max-w-lg space-y-4 overflow-y-auto overflow-x-hidden my-28">
+          <div className="flex flex-col items-center">
+            <img src={logo} alt="Company logo" className="w-10 h-10" />
+          </div>
+          <h1 className="text-xl font-bold text-center text-gray-900">
+            {isSignup ? 'Sign Up' : 'Sign In'}
           </h1>
-          <p className="text-center text-gray-500">
-            {isSignup
-              ? 'Sign up to manage your patients efficiently.'
-              : "You're just a step away from managing patients faster."}
+          <p className="text-center text-sm text-gray-600">
+            Hi <span className="text-indigo-500 font-bold">Doctor</span>! {isSignup ? 'Sign up to manage your patients efficiently.' : "You're just a step away from managing patients faster."}
           </p>
-
-          {/* OAuth Buttons */}
-          <div className="flex flex-col gap-3">
-            <button className="flex items-center justify-center gap-2 border border-[#2A5A7A] rounded-lg py-2 px-4 hover:bg-[#2A5A7A] hover:bg-opacity-10 transition text-sm font-medium w-full">
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-1.04.69-2.36 1.05-3.71 1.05-2.88 0-5.32-1.94-6.19-4.55H1.39v2.84C3.29 20.47 7.35 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.81 13.76c-.22-.66-.35-1.36-.35-2.11s.13-1.45.35-2.11V6.69H1.39C.5 8.31 0 10.11 0 12s.5 3.69 1.39 5.31l4.42-3.55z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 4.95c1.62 0 3.07.56 4.21 1.66l3.17-3.17C17.46 1.78 14.97.95 12 .95 7.35.95 3.29 3.48 1.39 6.69l4.42 3.55c.87-2.61 3.31-4.29 6.19-4.29z"
-                />
-              </svg>
-              Sign in with Google
-            </button>
-            <button className="flex items-center justify-center gap-2 border border-[#2A5A7A] rounded-lg py-2 px-4 hover:bg-[#2A5A7A] hover:bg-opacity-10 transition text-sm font-medium w-full">
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path
-                  fill="#0078D4"
-                  d="M0 0v11.2h11.2V0H0zm12.8 0v11.2H24V0H12.8zM0 12.8V24h11.2V12.8H0zm12.8 0V24H24V12.8H12.8z"
-                />
-              </svg>
-              Sign in with Microsoft
-            </button>
-          </div>
-
-          <div className="relative text-center my-4">
-            <span className="absolute inset-x-0 top-1/2 border-t border-gray-300 transform -translate-y-1/2"></span>
-            <span className="bg-white px-4 text-gray-500 text-sm relative z-10">or</span>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <input
-              type="email"
-              placeholder="Email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B4965]"
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B4965]"
-            />
+          <form onSubmit={handleSubmit} className="space-y-3 p-1" encType="multipart/form-data">
+            <div className={`${isSignup ? 'grid sm:grid-cols-2 gap-3' : 'flex flex-col gap-3'}`}>
+              {isSignup && (
+                <>
+                  <input
+                    type="text"
+                    placeholder="Full Name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Speciality"
+                    value={formData.speciality}
+                    onChange={(e) => setFormData({ ...formData, speciality: e.target.value })}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </>
+              )}
+              <input
+                type="email"
+                placeholder="Email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              {isSignup && (
+                <>
+                  <input
+                    type="tel"
+                    placeholder="Phone Number"
+                    value={formData.phoneNumber}
+                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="NPI Number"
+                    value={formData.npiNumber}
+                    onChange={(e) => setFormData({ ...formData, npiNumber: e.target.value })}
+                    className="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                  {renderFileInput({ name: 'nationalIdOrPassport', label: 'National ID or Passport' })}
+                  {renderFileInput({ name: 'medicalLicense', label: 'Medical License' })}
+                  {renderFileInput({ name: 'proofOfPractice', label: 'Proof of Practice' })}
+                  {renderFileInput({ name: 'taxIdOrBusinessRegistration', label: 'Tax ID or Business Registration' })}
+                </>
+              )}
+            </div>
             {isSignup && (
-              <>
-                <input
-                  type="text"
-                  placeholder="Full Name"
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B4965]"
-                />
-                <input
-                  type="text"
-                  placeholder="Specialty"
-                  value={formData.specialty}
-                  onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
-                  className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B4965]"
-                />
-              </>
+              <div className="col-span-2">
+                {renderFileInput({ name: 'image', label: 'Profile Image' })}
+              </div>
             )}
             <button
               type="submit"
-              className="w-full bg-[#1B4965] hover:bg-[#2A5A7A] text-white py-2 rounded-lg font-semibold transition duration-200"
+              className="w-full bg-blue-600 hover:bg-blue-800 text-white py-1.5 rounded-lg font-semibold transition duration-200"
             >
               {isSignup ? 'Sign Up' : 'Login'}
             </button>
           </form>
-
-          <p className="text-center text-sm">
+          <p className="text-center text-xs text-gray-600">
             {isSignup ? 'Already have an account?' : "Don't have an account?"}{' '}
             <button
               onClick={() => setIsSignup(!isSignup)}
-              className="text-[#006A6A] font-medium hover:underline"
+              className="text-blue-600 font-medium hover:underline"
             >
               {isSignup ? 'Login here' : 'Sign up here'}
             </button>
           </p>
         </div>
       </div>
+      <div className="hidden lg:flex w-1/2 bg-gray-100">
+  <Swiper
+    modules={[Pagination, Autoplay]}
+    pagination={{ clickable: true }}
+    autoplay={{ delay: 3000 }}
+    className="h-full min-h-[200px]"
+  >
+    <SwiperSlide className="flex flex-col justify-center items-center text-center p-6">
+      <img
+        src={slide1}
+        alt="Slide 1"
+        className="max-w-[600px] h-auto rounded-lg mb-4"
+      />
+      <h2 className="text-lg text-gray-800 mb-2">We trust you</h2>
+      <p className="text-sm text-gray-600">
+        Many trust you in what you are doing. We believe in you.
+      </p>
+    </SwiperSlide>
+    <SwiperSlide className="flex flex-col justify-center items-center text-center p-6">
+      <img
+        src={slide2}
+        alt="Slide 2"
+        className="max-w-[600px] h-auto rounded-lg mb-4"
+      />
+      <h2 className="text-lg text-gray-800 mb-2">Manage your data</h2>
+      <p className="text-sm text-gray-600">
+        Manage your data and view your history easily.
+      </p>
+    </SwiperSlide>
+  </Swiper>
+</div>
 
-      {/* Right: Swiper Image Slider */}
-      <div className="hidden lg:flex w-1/2 bg-[#006A6A] text-white items-center justify-center px-8">
-        <Swiper
-          modules={[Pagination, Autoplay]}
-          pagination={{ clickable: true }}
-          autoplay={{ delay: 4000 }}
-          loop
-          className="w-full h-full"
-        >
-          <SwiperSlide className="flex flex-col items-center justify-center text-center px-6">
-            <img src={slide1} alt="Streamline Workflow" className="w-3/4 mb-4 rounded-lg" />
-            <h2 className="text-2xl font-bold text-white">Streamline Your Workflow</h2>
-            <p className="text-sm text-white">AI-powered claim management made simple and fast.</p>
-          </SwiperSlide>
-
-          <SwiperSlide className="flex flex-col items-center justify-center text-center px-6">
-            <img src={slide2} alt="Faster Decisions" className="w-3/4 mb-4 rounded-lg" />
-            <h2 className="text-2xl font-bold text-white">Faster Decision Making</h2>
-            <p className="text-sm text-white">Get real-time insights and make informed choices.</p>
-          </SwiperSlide>
-
-          <SwiperSlide className="flex flex-col items-center justify-center text-center px-6">
-            <img src={slide3} alt="Collaborate Smarter" className="w-3/4 mb-4 rounded-lg" />
-            <h2 className="text-2xl font-bold text-white">Collaborate Smarter</h2>
-            <p className="text-sm text-white">Connect with clients and team efficiently and securely.</p>
-          </SwiperSlide>
-        </Swiper>
-      </div>
     </div>
   );
 }
